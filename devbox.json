@@ -1,24 +1,32 @@
 {
   "packages": {
-    "python": "3.12",
-    "zlib": "latest",
+    "python":       "3.12",
+    "zlib":         "latest",
+    "ffmpeg":       "latest",
+    "texliveSmall": "latest",
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#gcc": {},
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#pkg-config": {},
     "curl": {
       "version": "latest",
       "outputs": [
         "out",
         "bin"
       ]
-    }
+    },
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#cairo": {},
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#cairo.dev": {},
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#pango": {},
+    "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#pango.dev": {}
   },
   "env": {
     "PIP_DISABLE_PIP_VERSION_CHECK": "1",
-    "LD_LIBRARY_PATH": "$DEVBOX_PACKAGES_DIR/lib:$LD_LIBRARY_PATH"
+    "LD_LIBRARY_PATH":               "$DEVBOX_PACKAGES_DIR/lib:$LD_LIBRARY_PATH"
   },
   "shell": {
     "init_hook": [
       ". $VENV_DIR/bin/activate",
-      "pip install -q pandas numpy==1.26.4 seaborn matplotlib scikit-learn scipy nltk 'portalocker>=2.0.0' plotly tqdm ipython",
-      "pip install -q torch==2.3.0+cpu torchvision==0.18.0+cpu torchtext==0.18.0+cpu torchdata==0.9.0 --extra-index-url https://download.pytorch.org/whl/cpu"
+      "pip install -q pandas numpy==1.26.4 seaborn matplotlib scikit-learn scipy nltk 'portalocker>=2.0.0' plotly tqdm ipython manim gensim",
+      "pip install -q torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2+cpu torchtext==0.17.2 torchdata==0.7.1 --extra-index-url https://download.pytorch.org/whl/cpu"
     ],
     "scripts": {
       "run_test": "python main.py"

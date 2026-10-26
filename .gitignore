@@ -3,3 +3,10 @@
 __pycache__/
 *.pyc
 devbox.lock
+media/
+course/lessons/*/*.mp4
+.venv-tts/
+course/lessons/*/audio/
+.venv-tss/
+course/
+.pt
