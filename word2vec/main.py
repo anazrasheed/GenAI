@@ -1,3 +1,5 @@
+from helpers import train_model
+from sklearn.exceptions import SkipTestWarning
 from helpers import find_similar_words
 import pathlib
 from helpers import plot_embeddings
@@ -171,12 +173,12 @@ vocab_size = len(vocab)
 emsize = 24
 model_cbow =CBOW(vocab_size, emsize, vocab_size).to(device)
 
-path = pathlib.Path("cbow.pt")
+path = pathlib.Path("word2vec/cbow.pt")
 
 path_exists =   path.exists() and path.is_file() 
 
 if path_exists:
-    model_cbow.load_state_dict(torch.load("cbow.pt"))
+    model_cbow.load_state_dict(torch.load(path))
     model_cbow.eval()
 
 LR = 5 # learning rate
@@ -212,3 +214,102 @@ print(word_embeddings[word_index])
 
 plot_embeddings(word_embeddings, vocab = vocab, fpath="word2vec/fig_embeddings")
 
+# find_similar_words expects a dict of word -> tensor
+embeddings_dict = {w: torch.tensor(word_embeddings[i]) for i, w in enumerate(vocab.get_itos())}
+
+for query in ["baller", "mountain", "painting", "happily"]:
+    print(f"similar to '{query}': {find_similar_words(query, embeddings_dict, top_k=5)}")
+
+
+
+
+# Skip-gram model
+CONTEXT_SIZE= 2
+
+# Initialize an empty list to store the (target, context) pairs.
+skip_data = []
+
+# Iterate over each word in the tokenized toy_data, while excluding the first 
+# and last few words determined by the CONTEXT_SIZE.
+for i in range (CONTEXT_SIZE, len(tokenized_toy_data)-CONTEXT_SIZE):
+
+    # For a word at position i, the context comprises of words from the preceding CONTEXT_SIZE
+    # as well as from the succeeding CONTEXT_SIZE. The context words are collected in a list.
+    context = (
+        [tokenized_toy_data[i - j - 1] for j in range(CONTEXT_SIZE)]  # Preceding words
+        + [tokenized_toy_data[i + j + 1] for j in range(CONTEXT_SIZE)]  # Succeeding words
+    )
+
+    # The word at the current position i is taken as the target.
+    target = tokenized_toy_data[i]
+
+    # Append the (target, context) pair to the skip_data list.
+    skip_data.append((target, context))
+
+
+skip_data_=[[(sample[0],word) for word in  sample[1]] for sample in skip_data]
+skip_data_flat= [item  for items in  skip_data_ for item in items]
+
+print(skip_data_flat[8:28])
+
+def collate_fn(batch):
+    target_list, context_list = [], []
+    for _context, _target in batch:
+        
+        target_list.append(vocab[_target]) 
+        context_list.append(vocab[_context])
+        
+    target_list = torch.tensor(target_list, dtype=torch.int64)
+    context_list = torch.tensor(context_list, dtype=torch.int64)
+    return target_list.to(device), context_list.to(device)
+
+dataloader = DataLoader(skip_data_flat, batch_size=BATCH_SIZE, collate_fn=collate_fn)
+next(iter(dataloader))
+
+
+class SkipGram_Model(nn.Module):
+
+    def __init__(self, vocab_size, embed_dim):
+        super(SkipGram_Model, self).__init__()
+
+        # define the embedding layer
+        self.embeddings = nn.Embedding(num_embeddings=vocab_size,
+         embedding_dim=embed_dim)
+
+        # define the fully connected layer
+        self.fc = nn.Linear(in_features=embed_dim, out_features=vocab_size)
+
+    def forward(self, text):
+        # perform the forward pass
+        # pass the input text through the embeddings layer
+        out = self.embeddings(text)
+
+        # pass the output of the embeddings layer through the fully connected layer
+        # apply the ReLU activation function
+        out = torch.relu(out)
+        out = self.fc(out)
+
+        return out
+
+emsize = 24
+model_sg = SkipGram_Model(vocab_size, emsize).to(device)
+
+LR = 5 
+
+criterion = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model_sg.parameters(), lr=LR)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.1)
+
+model_sg , epoch_losses =train_model(model_sg, dataloader, criterion, optimizer, num_epochs=400)
+plt.plot(epoch_losses)
+plt.savefig("./word2vec/sg_epoch_losses")
+
+
+word_embeddings = model_sg.embeddings.weight.detach().cpu().numpy()
+plot_embeddings(word_embeddings, vocab=vocab,fpath= "./word2vec/sg_plot_embeddings")
+# word_embeddings above now holds the skip-gram embeddings
+sg_embeddings_dict = {w: torch.tensor(word_embeddings[i]) for i, w in enumerate(vocab.get_itos())}
+
+for query in ["baller", "mountain", "painting", "happily"]:
+    print(f"[skip-gram] similar to '{query}': {find_similar_words(query, sg_embeddings_dict, top_k=5)}")
+    print(f"[cbow]      similar to '{query}': {find_similar_words(query, embeddings_dict, top_k=5)}")
