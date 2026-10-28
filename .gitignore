@@ -9,4 +9,5 @@ course/lessons/*/*.mp4
 course/lessons/*/audio/
 .venv-tss/
 course/
-.pt
+*.pt
+.vector_cache/
